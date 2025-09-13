@@ -34,10 +34,10 @@ parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
 parser.add_argument('--lr', default=0.01, type=float, help='learning rate')
 parser.add_argument('--resume', default='', type=str, metavar='PATH', help='path to latest checkpoint (default: none)')
 parser.add_argument('--arch', default='LeNetPlus', choices=model_names, type=str, help='choosing network')
-parser.add_argument('--bs', default=128, type=int, help='batch size')
-parser.add_argument('--es', default=50, type=int, help='epoch size')
+parser.add_argument('--bs', default=64, type=int, help='batch size')
+parser.add_argument('--es', default=20, type=int, help='epoch size')
 parser.add_argument('--train_class_num', default=7, type=int, help='Classes used in training')
-parser.add_argument('--test_class_num', default=10, type=int, help='Classes used in testing')
+parser.add_argument('--test_class_num', default=9, type=int, help='Classes used in testing')
 parser.add_argument('--includes_all_train_class', default=True,  action='store_true',
                     help='If required all known classes included in testing')
 parser.add_argument('--embed_dim', default=2, type=int, help='embedding feature dimension')
@@ -47,7 +47,7 @@ parser.add_argument('--evaluate', action='store_true',
 #Parameters for weibull distribution fitting.
 parser.add_argument('--weibull_tail', default=20, type=int, help='Classes used in testing')
 parser.add_argument('--weibull_alpha', default=3, type=int, help='Classes used in testing')
-parser.add_argument('--weibull_threshold', default=0.9, type=float, help='Classes used in testing')
+parser.add_argument('--weibull_threshold', default=0.1, type=float, help='Classes used in testing')
 
 
 # Parameters for stage plotting
@@ -83,10 +83,10 @@ def main():
         transforms.Normalize((0.1307,), (0.3081,))
     ])
 
-    trainset = MNIST(root='../../data/', train=True, download=True, transform=transform,
+    trainset = MNIST(root='../../data/', train=True, download=False, transform=transform,
                      train_class_num=args.train_class_num, test_class_num=args.test_class_num,
                      includes_all_train_class=args.includes_all_train_class)
-    testset = MNIST(root='../../data', train=False, download=True, transform=transform,
+    testset = MNIST(root='../../data', train=False, download=False, transform=transform,
                     train_class_num=args.train_class_num, test_class_num=args.test_class_num,
                     includes_all_train_class=args.includes_all_train_class)
     # data loader
@@ -215,13 +215,15 @@ def test(epoch, net,trainloader,  testloader,criterion, device):
         score_openmax.append(so)
 
     print("Evaluation...")
-    eval_softmax = Evaluation(pred_softmax, labels, score_softmax)
-    eval_softmax_threshold = Evaluation(pred_softmax_threshold, labels, score_softmax)
-    eval_openmax = Evaluation(pred_openmax, labels, score_openmax)
+    eval_softmax = Evaluation(pred_softmax, labels, score_softmax,unknown_class_idx=args.train_class_num)
+    eval_softmax_threshold = Evaluation(pred_softmax_threshold, labels, score_softmax,unknown_class_idx=args.train_class_num)
+    eval_openmax = Evaluation(pred_openmax, labels, score_openmax,unknown_class_idx=args.train_class_num)
     torch.save(eval_softmax, os.path.join(args.checkpoint, 'eval_softmax.pkl'))
     torch.save(eval_softmax_threshold, os.path.join(args.checkpoint, 'eval_softmax_threshold.pkl'))
     torch.save(eval_openmax, os.path.join(args.checkpoint, 'eval_openmax.pkl'))
 
+    print(f"Softmax inner metric is %.3f ({eval_softmax.certas_inner}/{eval_softmax.total_inner})" % (eval_softmax.inner_metric))
+    print(f"Softmax outer metric is %.3f ({eval_softmax.certas_outer}/{eval_softmax.total_outer})" % (eval_softmax.outer_metric))
     print(f"Softmax accuracy is %.3f" % (eval_softmax.accuracy))
     print(f"Softmax F1 is %.3f" % (eval_softmax.f1_measure))
     print(f"Softmax f1_macro is %.3f" % (eval_softmax.f1_macro))
@@ -229,6 +231,8 @@ def test(epoch, net,trainloader,  testloader,criterion, device):
     print(f"Softmax area_under_roc is %.3f" % (eval_softmax.area_under_roc))
     print(f"_________________________________________")
 
+    print(f"SoftmaxThreshold inner metric is %.3f ({eval_softmax_threshold.certas_inner}/{eval_softmax_threshold.total_inner})" % (eval_softmax_threshold.inner_metric))
+    print(f"SoftmaxThreshold outer metric is %.3f ({eval_softmax_threshold.certas_outer}/{eval_softmax_threshold.total_outer})" % (eval_softmax_threshold.outer_metric))
     print(f"SoftmaxThreshold accuracy is %.3f" % (eval_softmax_threshold.accuracy))
     print(f"SoftmaxThreshold F1 is %.3f" % (eval_softmax_threshold.f1_measure))
     print(f"SoftmaxThreshold f1_macro is %.3f" % (eval_softmax_threshold.f1_macro))
@@ -236,7 +240,10 @@ def test(epoch, net,trainloader,  testloader,criterion, device):
     print(f"SoftmaxThreshold area_under_roc is %.3f" % (eval_softmax_threshold.area_under_roc))
     print(f"_________________________________________")
 
-    print(f"OpenMax accuracy is %.3f" % (eval_openmax.accuracy))
+    print(f"OpenMax inner metric is %.3f ({eval_openmax.certas_inner}/{eval_openmax.total_inner})" % (eval_openmax.inner_metric))
+    print(f"OpenMax outer metric is %.3f ({eval_openmax.certas_outer}/{eval_openmax.total_outer})" % (eval_openmax.outer_metric))
+    print(f"OpenMax uuc accuracy is %.3f ({eval_openmax.certas_uuc_accuracy}/{eval_openmax.total_ucc_accuracy})" % (eval_openmax.uuc_accuracy))
+    print(f"OpenMax accuracy is %.3f ({eval_openmax.certas_accuracy}/{eval_openmax.total_accuracy})" % (eval_openmax.accuracy))
     print(f"OpenMax F1 is %.3f" % (eval_openmax.f1_measure))
     print(f"OpenMax f1_macro is %.3f" % (eval_openmax.f1_macro))
     print(f"OpenMax f1_macro_weighted is %.3f" % (eval_openmax.f1_macro_weighted))

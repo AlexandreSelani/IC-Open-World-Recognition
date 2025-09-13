@@ -14,8 +14,9 @@ class Evaluation(object):
         self.unknown_class_idx = unknown_class_idx # indice que representa a classe desconhecida. Vai ser usado para calcular as metricas inner e outer
 
         self.inner_metric, self.certas_inner, self.total_inner = self._inner_metric()
+        self.uuc_accuracy, self.certas_uuc_accuracy, self.total_ucc_accuracy = self._UUC_Accuracy()
+        self.accuracy,self.certas_accuracy,self.total_accuracy = self._accuracy()
         self.outer_metric, self.certas_outer, self.total_outer = self._outer_metric()
-        self.accuracy = self._accuracy()
         self.f1_measure = self._f1_measure()
         self.f1_macro = self._f1_macro()
         self.f1_macro_weighted = self._f1_macro_weighted()
@@ -26,17 +27,17 @@ class Evaluation(object):
         if self.prediction_scores is not None:
             self.area_under_roc = self._area_under_roc(prediction_scores)
 
-    def _accuracy(self) -> float:
+    def _accuracy(self) -> tuple[float,int,int]:
         """
         Returns the accuracy score of the labels and predictions.
         :return: float
         """
         assert len(self.predict) == len(self.label)
         correct = (np.array(self.predict) == np.array(self.label)).sum()
-        return float(correct)/float(len(self.predict))
+        return float(correct)/float(len(self.predict)),correct,len(self.predict)
     
     def _inner_metric(self) -> tuple[float,float,float]:
-        """Retorna a acuracia levando em consideracao apenas as amostras de classes conhecidas"""
+        """Retorna a acuracia levando em consideracao apenas as amostras de classes CONHECIDAS (Inner metric ou KKC Accuracy)"""
         assert len(self.predict) == len(self.label)
         
         indices_amostras = [i for i,x in enumerate(self.label) if x != self.unknown_class_idx] #vetor com os indices das amostras que devem ser verificadas
@@ -52,8 +53,10 @@ class Evaluation(object):
 
         return float(corretas)/float(len(predicoes)),float(corretas),float(len(predicoes))
 
-    def _outer_metric(self) -> tuple[float,float,float]:
-        """Retorna a acuracia levando em consideracao apenas as amostras de classes desconhecidas"""
+    def _UUC_Accuracy(self) -> tuple[float,int,int]:
+        """Retorna a acuracia levando em consideracao apenas as amostras de classes DESCONHECIDAS (UUC Accuracy)
+        NAO eh outer metric
+        """
 
         assert len(self.predict) == len(self.label)
         
@@ -68,7 +71,24 @@ class Evaluation(object):
             if predicao == self.label[idx]: #se a predicao for correta
                 corretas+=1
 
-        return float(corretas)/float(len(predicoes)),float(corretas),float(len(predicoes))
+        return float(corretas)/float(len(predicoes)),corretas,len(predicoes)
+    
+    def _outer_metric(self) -> tuple[float,int,int]:
+        """Mede a habilidade do classificador de distinguir KKCs e UUCs. Eh um problema de classificacao binaria
+        """
+        assert len(self.predict) == len(self.label)
+        corretas = 0
+
+        for predicao,label_correta in zip(self.predict,self.label):
+            if(label_correta == self.unknown_class_idx):#se a amostra for UUC
+                if(predicao==self.unknown_class_idx):#se o classificador detectou a novidade
+                    corretas+=1
+            else:                                   #se a amostra for KKC
+                if(predicao!=self.unknown_class_idx): #se a amostra foi classificada como KKC, independente de acertar a classe
+                    corretas+=1
+        
+        return float(corretas)/float(len(self.predict)),corretas,len(self.predict)
+
     
     def _f1_measure(self) -> float:
         """
@@ -159,7 +179,7 @@ class Evaluation(object):
         else:
             xticks_rotation = 'horizontal'
 
-        display.plot(include_values=True, cmap=plt.cm.get_cmap('Blues'), xticks_rotation=xticks_rotation, ax=ax)
+        display.plot(include_values=True, cmap=plt.colormaps.get_cmap('Blues'), xticks_rotation=xticks_rotation, ax=ax)
         if savepath is None:
             plt.show()
         else:
@@ -171,7 +191,9 @@ if __name__ == '__main__':
     predict = [1, 2, 3, 4, 5, 3, 3, 2, 2, 5, 6, 6, 4, 3, 2, 4, 5, 6, 6, 3, 2]
     label =   [2, 5, 3, 4, 5, 3, 2, 2, 4, 6, 6, 6, 3, 3, 2, 5, 5, 6, 6, 3, 3]
 
-    eval = Evaluation(predict, label)
+    eval = Evaluation(predict, label,unknown_class_idx=6)
+    print(f"Inner metric: {eval.inner_metric}%")
+    print(f"Outer metric: {eval.outer_metric}%")
     print('Accuracy:', f"%.3f" % eval.accuracy)
     print('F1-measure:', f'{eval.f1_measure:.3f}')
     print('F1-macro:', f'{eval.f1_macro:.3f}')
@@ -184,7 +206,7 @@ if __name__ == '__main__':
     print('recall (weighted):', f'{eval.recall_weighted:.3f}')
 
     # Generate "random prediction score" to test feeding in prediction score from NN
-    test_one_hot_encoder = OneHotEncoder(sparse=False, handle_unknown='ignore')
+    test_one_hot_encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
     test_one_hot_encoder.fit(np.array(label).reshape(-1, 1))
     rand_prediction_scores = 2 * test_one_hot_encoder.transform(np.array(predict).reshape(-1, 1))  # One hot
     rand_prediction_scores += np.random.rand(*rand_prediction_scores.shape)
