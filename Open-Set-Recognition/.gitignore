@@ -129,3 +129,5 @@ work_dirs/
 *.xlsx
 
 Ablation/plot_openness/openness.xlsx
+
+OSR/OpenMax/checkpoints

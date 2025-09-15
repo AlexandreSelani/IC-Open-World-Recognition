@@ -11,12 +11,13 @@ class Evaluation(object):
         self.predict = predict
         self.label = label
         self.prediction_scores = prediction_scores
-        self.unknown_class_idx = unknown_class_idx # indice que representa a classe desconhecida. Vai ser usado para calcular as metricas inner e outer
+        self.unknown_class_idx = unknown_class_idx # indice que representa a classe desconhecida. Vai ser usado para calcular as metricas implementadas
 
         self.inner_metric, self.certas_inner, self.total_inner = self._inner_metric()
         self.uuc_accuracy, self.certas_uuc_accuracy, self.total_ucc_accuracy = self._UUC_Accuracy()
         self.accuracy,self.certas_accuracy,self.total_accuracy = self._accuracy()
         self.outer_metric, self.certas_outer, self.total_outer = self._outer_metric()
+        self.halfpoint,self.certas_halfpoint,self.total_halfpoint = self._halfpoint()
         self.f1_measure = self._f1_measure()
         self.f1_macro = self._f1_macro()
         self.f1_macro_weighted = self._f1_macro_weighted()
@@ -40,10 +41,10 @@ class Evaluation(object):
         """Retorna a acuracia levando em consideracao apenas as amostras de classes CONHECIDAS (Inner metric ou KKC Accuracy)"""
         assert len(self.predict) == len(self.label)
         
-        indices_amostras = [i for i,x in enumerate(self.label) if x != self.unknown_class_idx] #vetor com os indices das amostras que devem ser verificadas
+        indices_amostras = [i for i,y in enumerate(self.label) if y != self.unknown_class_idx] #vetor com os indices das amostras que devem ser verificadas
         predicoes = [self.predict[i] for i in indices_amostras] #amostras a serem consideradas
 
-        assert len(indices_amostras) == len(predicoes)
+        
 
         corretas = 0
 
@@ -60,10 +61,10 @@ class Evaluation(object):
 
         assert len(self.predict) == len(self.label)
         
-        indices_amostras = [i for i,x in enumerate(self.label) if x == self.unknown_class_idx] #vetor com os indices das amostras que devem ser verificadas
+        indices_amostras = [i for i,y in enumerate(self.label) if y == self.unknown_class_idx] #vetor com os indices das amostras que devem ser verificadas
         predicoes = [self.predict[i] for i in indices_amostras] #amostras a serem consideradas
 
-        assert len(indices_amostras) == len(predicoes)
+        
 
         corretas = 0
 
@@ -89,6 +90,28 @@ class Evaluation(object):
         
         return float(corretas)/float(len(self.predict)),corretas,len(self.predict)
 
+    
+    def _halfpoint(self) -> tuple[float,int,int]:
+        """Uma modificacao do Inner metric que tambem leva em consideracao falsos desconhecidos
+        
+         
+        """
+        assert len(self.predict) == len(self.label)
+        
+        indices_amostras = [i for i,(x,y) in enumerate(zip(self.predict,self.label)) if (y != self.unknown_class_idx or (y == self.unknown_class_idx and x!=self.unknown_class_idx))] #vetor com os indices das amostras que devem ser verificadas
+
+        predicoes = [self.predict[i] for i in indices_amostras] #amostras a serem consideradas
+
+        
+
+        corretas = 0
+
+        for predicao, idx in zip(predicoes,indices_amostras):
+            if predicao == self.label[idx]: #se a predicao for correta
+                corretas+=1
+
+        
+        return float(corretas)/float(len(predicoes)),corretas,len(predicoes)
     
     def _f1_measure(self) -> float:
         """
