@@ -1,2 +1,2 @@
 osr_maxu/
-*.png
+__pycache__
