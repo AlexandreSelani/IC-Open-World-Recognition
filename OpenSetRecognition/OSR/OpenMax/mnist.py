@@ -47,7 +47,7 @@ parser.add_argument('--evaluate', action='store_true',
 #Parameters for weibull distribution fitting.
 parser.add_argument('--weibull_tail', default=20, type=int, help='Classes used in testing')
 parser.add_argument('--weibull_alpha', default=3, type=int, help='Classes used in testing')
-parser.add_argument('--weibull_threshold', default=0.1, type=float, help='Classes used in testing')
+parser.add_argument('--weibull_threshold', default=0.5, type=float, help='Classes used in testing')
 
 
 # Parameters for stage plotting
@@ -224,6 +224,8 @@ def test(epoch, net,trainloader,  testloader,criterion, device):
 
     print(f"Softmax inner metric is %.3f ({eval_softmax.certas_inner}/{eval_softmax.total_inner})" % (eval_softmax.inner_metric))
     print(f"Softmax outer metric is %.3f ({eval_softmax.certas_outer}/{eval_softmax.total_outer})" % (eval_softmax.outer_metric))
+    print(f"Softmax halfpoint is %.3f ({eval_softmax.certas_halfpoint}/{eval_softmax.total_halfpoint})" % (eval_softmax.halfpoint))
+    print(f"Softmax uuc accuracy is %.3f ({eval_softmax_threshold.certas_uuc_accuracy}/{eval_softmax_threshold.total_ucc_accuracy})" % (eval_softmax_threshold.uuc_accuracy))
     print(f"Softmax accuracy is %.3f" % (eval_softmax.accuracy))
     print(f"Softmax F1 is %.3f" % (eval_softmax.f1_measure))
     print(f"Softmax f1_macro is %.3f" % (eval_softmax.f1_macro))
@@ -233,6 +235,8 @@ def test(epoch, net,trainloader,  testloader,criterion, device):
 
     print(f"SoftmaxThreshold inner metric is %.3f ({eval_softmax_threshold.certas_inner}/{eval_softmax_threshold.total_inner})" % (eval_softmax_threshold.inner_metric))
     print(f"SoftmaxThreshold outer metric is %.3f ({eval_softmax_threshold.certas_outer}/{eval_softmax_threshold.total_outer})" % (eval_softmax_threshold.outer_metric))
+    print(f"SoftmaxThreshold halfpoint is %.3f ({eval_softmax_threshold.certas_halfpoint}/{eval_softmax_threshold.total_halfpoint})" % (eval_softmax_threshold.halfpoint))
+    print(f"SoftmaxThreshold uuc accuracy is %.3f ({eval_softmax_threshold.certas_uuc_accuracy}/{eval_softmax_threshold.total_ucc_accuracy})" % (eval_softmax_threshold.uuc_accuracy))
     print(f"SoftmaxThreshold accuracy is %.3f" % (eval_softmax_threshold.accuracy))
     print(f"SoftmaxThreshold F1 is %.3f" % (eval_softmax_threshold.f1_measure))
     print(f"SoftmaxThreshold f1_macro is %.3f" % (eval_softmax_threshold.f1_macro))
@@ -242,6 +246,7 @@ def test(epoch, net,trainloader,  testloader,criterion, device):
 
     print(f"OpenMax inner metric is %.3f ({eval_openmax.certas_inner}/{eval_openmax.total_inner})" % (eval_openmax.inner_metric))
     print(f"OpenMax outer metric is %.3f ({eval_openmax.certas_outer}/{eval_openmax.total_outer})" % (eval_openmax.outer_metric))
+    print(f"OpenMax halfpoint is %.3f ({eval_openmax.certas_halfpoint}/{eval_openmax.total_halfpoint})" % (eval_openmax.halfpoint))
     print(f"OpenMax uuc accuracy is %.3f ({eval_openmax.certas_uuc_accuracy}/{eval_openmax.total_ucc_accuracy})" % (eval_openmax.uuc_accuracy))
     print(f"OpenMax accuracy is %.3f ({eval_openmax.certas_accuracy}/{eval_openmax.total_accuracy})" % (eval_openmax.accuracy))
     print(f"OpenMax F1 is %.3f" % (eval_openmax.f1_measure))
