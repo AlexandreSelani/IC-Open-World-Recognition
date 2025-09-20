@@ -24,6 +24,7 @@ from Utils import adjust_learning_rate, progress_bar, Logger, mkdir_p, Evaluatio
 from openmax import compute_train_score_and_mavs_and_dists,fit_weibull,openmax
 from Modelbuilder import Network
 from AnaliseGrafica import AnaliseGrafica
+from AnaliseGrafica_OpenMax import AnaliseGrafica_OpenMax
 
 model_names = sorted(name for name in models.__dict__
     if not name.startswith("__")
@@ -32,13 +33,13 @@ model_names = sorted(name for name in models.__dict__
 os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 # os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
-parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
+parser.add_argument('--lr', default=0.01, type=float, help='learning rate')
 parser.add_argument('--resume', default='', type=str, metavar='PATH', help='path to latest checkpoint (default: none)')
 parser.add_argument('--arch', default='ResNet18', choices=model_names, type=str, help='choosing network')
-parser.add_argument('--bs', default=64, type=int, help='batch size')
-parser.add_argument('--es', default=6, type=int, help='epoch size')
+parser.add_argument('--bs', default=128, type=int, help='batch size')
+parser.add_argument('--es', default=50, type=int, help='epoch size')
 parser.add_argument('--train_class_num', default=5, type=int, help='Classes used in training')
-parser.add_argument('--test_class_num', default=7, type=int, help='Classes used in testing')
+parser.add_argument('--test_class_num', default=10, type=int, help='Classes used in testing')
 parser.add_argument('--includes_all_train_class', default=True,  action='store_true',
                     help='If required all known classes included in testing')
 parser.add_argument('--evaluate', action='store_true',
@@ -52,11 +53,11 @@ parser.add_argument('--weibull_threshold', default=0.9, type=float, help='Classe
 
 
 args = parser.parse_args()
-
+dataset = "CIFAR-100"
 #metricas
-metricas_openmax = AnaliseGrafica("OpenMax")
-metricas_softmax= AnaliseGrafica("Softmax")
-metricas_softmaxThreshold = AnaliseGrafica("SoftmaxThreshold")
+metricas_openmax = AnaliseGrafica_OpenMax(dataset)
+metricas_softmax= AnaliseGrafica("Softmax",dataset)
+metricas_softmaxThreshold = AnaliseGrafica("SoftmaxThreshold",dataset)
 
 def main():
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -137,8 +138,8 @@ def main():
 
             # don't test the first epoch, cause some classes may have no predict samples, leading to error caused by
             # compute_train_score_and_mavs_and_dists
-            if epoch % 5 == 0 and epoch!=0:
-                test(epoch, net, trainloader, testloader, criterion, device)
+            #if epoch % 5 == 0 and epoch!=0:
+            test(epoch, net, trainloader, testloader, criterion, device)
     test(epoch, net, trainloader, testloader, criterion, device)
     logger.close()
 

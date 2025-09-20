@@ -4,8 +4,9 @@ from OpenSetRecognition import Evaluation
 
 class AnaliseGrafica:
 
-    def __init__(self, nome:str):
+    def __init__(self, nome:str,nome_dataset:str):
         self.nome=nome
+        self.nome_dataset=nome_dataset
         self.accuracy=[]
         self.inner_metric=[]
         self.outer_metric=[]
@@ -35,15 +36,14 @@ class AnaliseGrafica:
         print(f"{self.nome} area_under_roc is %.3f" % (metricas.area_under_roc))
         print(f"_________________________________________")
     
-    def mostraGrafico(self,tail=None,alpha=None,epsilon=None,batch_size=None):
+    def mostraGrafico(self):
         plt.plot(self.epochs, self.accuracy, color='red', label='Acurácia')
         plt.plot(self.epochs, self.inner_metric, color='blue', label='Inner metric')
         plt.plot(self.epochs, self.outer_metric, color='orange', label='Outer metric')
         plt.plot(self.epochs, self.halfpoint, color='green', label='Halfpoint')
         
         titulo = f"metricas do {self.nome} "
-        if(str.capitalize(self.nome)== "Openmax"):
-                titulo=titulo + f"(tail = {tail}, alpha = {alpha}, epsilon = {epsilon}, batch_size = {batch_size})"
+        
             
         plt.title(titulo)
 
@@ -54,7 +54,7 @@ class AnaliseGrafica:
         plt.legend()
         plt.grid(True, linestyle='--', alpha=0.6)
 
-        plt.savefig("../../../metricas_openmax.png")
+        plt.savefig(f"../../../metricas_{self.nome}.png")
         plt.show()
 
         
