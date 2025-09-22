@@ -14,6 +14,7 @@ class AnaliseGrafica:
         self.uuc_accuracy=[]
         self.F1=[]
         self.epochs=[]
+        self.titulo = f"metricas do {self.nome} "
 
     def addEpoch(self,metricas:Evaluation,epoch:int):
         self.epochs.append(epoch)
@@ -23,6 +24,7 @@ class AnaliseGrafica:
         self.outer_metric.append(metricas.outer_metric)
         self.halfpoint.append(metricas.halfpoint)
         self.uuc_accuracy.append(metricas.uuc_accuracy)
+        self.F1.append(metricas.f1_measure)
         #falta o F1, preciso ver como esta em Evaluation
 
         print(f"{self.nome} inner metric is %.3f ({metricas.certas_inner}/{metricas.total_inner})" % (metricas.inner_metric))
@@ -33,19 +35,21 @@ class AnaliseGrafica:
         print(f"{self.nome} F1 is %.3f" % (metricas.f1_measure))
         print(f"{self.nome} f1_macro is %.3f" % (metricas.f1_macro))
         print(f"{self.nome} f1_macro_weighted is %.3f" % (metricas.f1_macro_weighted))
-        print(f"{self.nome} area_under_roc is %.3f" % (metricas.area_under_roc))
+        #print(f"{self.nome} area_under_roc is %.3f" % (metricas.area_under_roc))
         print(f"_________________________________________")
     
     def mostraGrafico(self):
+        plt.figure(figsize=(12, 8))
         plt.plot(self.epochs, self.accuracy, color='red', label='Acurácia')
         plt.plot(self.epochs, self.inner_metric, color='blue', label='Inner metric')
         plt.plot(self.epochs, self.outer_metric, color='orange', label='Outer metric')
         plt.plot(self.epochs, self.halfpoint, color='green', label='Halfpoint')
+        plt.plot(self.epochs, self.uuc_accuracy, color='black', label='UUC Accuracy')
+        plt.plot(self.epochs, self.F1, color='purple', label='F1 Score')
         
-        titulo = f"metricas do {self.nome} "
         
             
-        plt.title(titulo)
+        plt.title(self.titulo)
 
         plt.xlabel("Épocas")
         plt.xticks(self.epochs)
@@ -54,7 +58,7 @@ class AnaliseGrafica:
         plt.legend()
         plt.grid(True, linestyle='--', alpha=0.6)
 
-        plt.savefig(f"../../../metricas_{self.nome}.png")
+        plt.savefig(f"../../../metricas_{self.nome}_{self.nome_dataset}.png")
         plt.show()
 
         

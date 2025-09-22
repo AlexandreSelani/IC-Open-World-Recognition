@@ -99,6 +99,7 @@ class MNIST(VisionDataset):
             rnd = np.random.RandomState(42)
             unknown_list = list(range(train_class_num,10))
             test_classes = rnd.choice(unknown_list, test_class_num-train_class_num, replace=False).tolist()
+            print(f"TEST CLASSES: {test_classes}")
             test_classes = train_classes + test_classes
         else:
             rnd = np.random.RandomState(42)

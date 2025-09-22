@@ -17,12 +17,15 @@ import sys
 
 #from models import *
 sys.path.append("../..")
+sys.path.append("../../..")
 import backbones.cifar as models
 from datasets import CIFAR100,MNIST
 from Utils import adjust_learning_rate, progress_bar, Logger, mkdir_p, Evaluation
 from openmax import compute_train_score_and_mavs_and_dists,fit_weibull,openmax
 from Modelbuilder import Network
 from Plotter import plot_feature
+from AnaliseGrafica import AnaliseGrafica
+from AnaliseGrafica_OpenMax import AnaliseGrafica_OpenMax
 
 model_names = sorted(name for name in models.__dict__
     if not name.startswith("__")
@@ -31,13 +34,13 @@ model_names = sorted(name for name in models.__dict__
 os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 # os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
-parser.add_argument('--lr', default=0.01, type=float, help='learning rate')
+parser.add_argument('--lr', default=0.001, type=float, help='learning rate')
 parser.add_argument('--resume', default='', type=str, metavar='PATH', help='path to latest checkpoint (default: none)')
 parser.add_argument('--arch', default='LeNetPlus', choices=model_names, type=str, help='choosing network')
 parser.add_argument('--bs', default=64, type=int, help='batch size')
-parser.add_argument('--es', default=20, type=int, help='epoch size')
-parser.add_argument('--train_class_num', default=7, type=int, help='Classes used in training')
-parser.add_argument('--test_class_num', default=9, type=int, help='Classes used in testing')
+parser.add_argument('--es', default=15, type=int, help='epoch size')
+parser.add_argument('--train_class_num', default=9, type=int, help='Classes used in training')
+parser.add_argument('--test_class_num', default=10, type=int, help='Classes used in testing')
 parser.add_argument('--includes_all_train_class', default=True,  action='store_true',
                     help='If required all known classes included in testing')
 parser.add_argument('--embed_dim', default=2, type=int, help='embedding feature dimension')
@@ -46,8 +49,8 @@ parser.add_argument('--evaluate', action='store_true',
 
 #Parameters for weibull distribution fitting.
 parser.add_argument('--weibull_tail', default=20, type=int, help='Classes used in testing')
-parser.add_argument('--weibull_alpha', default=3, type=int, help='Classes used in testing')
-parser.add_argument('--weibull_threshold', default=0.5, type=float, help='Classes used in testing')
+parser.add_argument('--weibull_alpha', default=4, type=int, help='Classes used in testing')
+parser.add_argument('--weibull_threshold', default=0.3, type=float, help='Classes used in testing')
 
 
 # Parameters for stage plotting
@@ -57,6 +60,11 @@ parser.add_argument('--plot_quality', default=200, type=int, help='DPI of plot f
 
 
 args = parser.parse_args()
+
+dataset = "MNIIST"
+#metricas
+metricas_openmax = AnaliseGrafica_OpenMax(dataset)
+
 
 
 
@@ -80,20 +88,22 @@ def main():
     print('==> Preparing data..')
     transform = transforms.Compose([
         transforms.ToTensor(),
+        transforms.Resize(28),
         transforms.Normalize((0.1307,), (0.3081,))
     ])
 
-    trainset = MNIST(root='../../data/', train=True, download=False, transform=transform,
+    trainset = MNIST(root='../../data/', train=True, download=True, transform=transform,
                      train_class_num=args.train_class_num, test_class_num=args.test_class_num,
                      includes_all_train_class=args.includes_all_train_class)
-    testset = MNIST(root='../../data', train=False, download=False, transform=transform,
+    testset = MNIST(root='../../data', train=False, download=True, transform=transform,
                     train_class_num=args.train_class_num, test_class_num=args.test_class_num,
                     includes_all_train_class=args.includes_all_train_class)
     # data loader
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=args.bs, shuffle=True, num_workers=4)
     testloader = torch.utils.data.DataLoader(testset, batch_size=args.bs, shuffle=False, num_workers=4)
 
-
+    print(len(trainloader))
+    print(len(testloader))
     # Model
     net = Network(backbone=args.arch, num_classes=args.train_class_num, embed_dim=args.embed_dim)
     fea_dim = net.classifier.in_features
@@ -137,10 +147,12 @@ def main():
                          plot_class_num=args.train_class_num, maximum=args.plot_max, plot_quality=args.plot_quality)
             test(epoch, net, trainloader, testloader, criterion, device)
 
-    test(99999, net, trainloader, testloader, criterion, device)
+    #test(99999, net, trainloader, testloader, criterion, device)
     plot_feature(net, testloader, device, args.plotfolder, epoch="test",
                  plot_class_num=args.train_class_num+1, maximum=args.plot_max, plot_quality=args.plot_quality)
     logger.close()
+
+    metricas_openmax.mostraGrafico(alpha=args.weibull_alpha,epsilon=args.weibull_threshold,batch_size=args.bs,tail=args.weibull_tail)
 
 
 # Training
@@ -222,38 +234,8 @@ def test(epoch, net,trainloader,  testloader,criterion, device):
     torch.save(eval_softmax_threshold, os.path.join(args.checkpoint, 'eval_softmax_threshold.pkl'))
     torch.save(eval_openmax, os.path.join(args.checkpoint, 'eval_openmax.pkl'))
 
-    print(f"Softmax inner metric is %.3f ({eval_softmax.certas_inner}/{eval_softmax.total_inner})" % (eval_softmax.inner_metric))
-    print(f"Softmax outer metric is %.3f ({eval_softmax.certas_outer}/{eval_softmax.total_outer})" % (eval_softmax.outer_metric))
-    print(f"Softmax halfpoint is %.3f ({eval_softmax.certas_halfpoint}/{eval_softmax.total_halfpoint})" % (eval_softmax.halfpoint))
-    print(f"Softmax uuc accuracy is %.3f ({eval_softmax_threshold.certas_uuc_accuracy}/{eval_softmax_threshold.total_ucc_accuracy})" % (eval_softmax_threshold.uuc_accuracy))
-    print(f"Softmax accuracy is %.3f" % (eval_softmax.accuracy))
-    print(f"Softmax F1 is %.3f" % (eval_softmax.f1_measure))
-    print(f"Softmax f1_macro is %.3f" % (eval_softmax.f1_macro))
-    print(f"Softmax f1_macro_weighted is %.3f" % (eval_softmax.f1_macro_weighted))
-    print(f"Softmax area_under_roc is %.3f" % (eval_softmax.area_under_roc))
-    print(f"_________________________________________")
-
-    print(f"SoftmaxThreshold inner metric is %.3f ({eval_softmax_threshold.certas_inner}/{eval_softmax_threshold.total_inner})" % (eval_softmax_threshold.inner_metric))
-    print(f"SoftmaxThreshold outer metric is %.3f ({eval_softmax_threshold.certas_outer}/{eval_softmax_threshold.total_outer})" % (eval_softmax_threshold.outer_metric))
-    print(f"SoftmaxThreshold halfpoint is %.3f ({eval_softmax_threshold.certas_halfpoint}/{eval_softmax_threshold.total_halfpoint})" % (eval_softmax_threshold.halfpoint))
-    print(f"SoftmaxThreshold uuc accuracy is %.3f ({eval_softmax_threshold.certas_uuc_accuracy}/{eval_softmax_threshold.total_ucc_accuracy})" % (eval_softmax_threshold.uuc_accuracy))
-    print(f"SoftmaxThreshold accuracy is %.3f" % (eval_softmax_threshold.accuracy))
-    print(f"SoftmaxThreshold F1 is %.3f" % (eval_softmax_threshold.f1_measure))
-    print(f"SoftmaxThreshold f1_macro is %.3f" % (eval_softmax_threshold.f1_macro))
-    print(f"SoftmaxThreshold f1_macro_weighted is %.3f" % (eval_softmax_threshold.f1_macro_weighted))
-    print(f"SoftmaxThreshold area_under_roc is %.3f" % (eval_softmax_threshold.area_under_roc))
-    print(f"_________________________________________")
-
-    print(f"OpenMax inner metric is %.3f ({eval_openmax.certas_inner}/{eval_openmax.total_inner})" % (eval_openmax.inner_metric))
-    print(f"OpenMax outer metric is %.3f ({eval_openmax.certas_outer}/{eval_openmax.total_outer})" % (eval_openmax.outer_metric))
-    print(f"OpenMax halfpoint is %.3f ({eval_openmax.certas_halfpoint}/{eval_openmax.total_halfpoint})" % (eval_openmax.halfpoint))
-    print(f"OpenMax uuc accuracy is %.3f ({eval_openmax.certas_uuc_accuracy}/{eval_openmax.total_ucc_accuracy})" % (eval_openmax.uuc_accuracy))
-    print(f"OpenMax accuracy is %.3f ({eval_openmax.certas_accuracy}/{eval_openmax.total_accuracy})" % (eval_openmax.accuracy))
-    print(f"OpenMax F1 is %.3f" % (eval_openmax.f1_measure))
-    print(f"OpenMax f1_macro is %.3f" % (eval_openmax.f1_macro))
-    print(f"OpenMax f1_macro_weighted is %.3f" % (eval_openmax.f1_macro_weighted))
-    print(f"OpenMax area_under_roc is %.3f" % (eval_openmax.area_under_roc))
-    print(f"_________________________________________")
+    
+    metricas_openmax.addEpoch(eval_openmax,epoch)
 
 
 

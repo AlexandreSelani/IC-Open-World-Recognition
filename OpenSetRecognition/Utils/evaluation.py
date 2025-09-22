@@ -25,8 +25,8 @@ class Evaluation(object):
         self.precision_macro, self.recall_macro = self._precision_recall(average='macro')
         self.precision_weighted, self.recall_weighted = self._precision_recall(average='weighted')
         self.confusion_matrix = self._confusion_matrix()
-        if self.prediction_scores is not None:
-            self.area_under_roc = self._area_under_roc(prediction_scores)
+        # if self.prediction_scores is not None:
+        #     self.area_under_roc = self._area_under_roc(prediction_scores)
 
     def _accuracy(self) -> tuple[float,int,int]:
         """
